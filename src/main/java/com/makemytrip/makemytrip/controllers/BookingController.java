@@ -1,22 +1,59 @@
 package com.makemytrip.makemytrip.controllers;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import com.makemytrip.makemytrip.models.Booking;
+import com.makemytrip.makemytrip.services.BookingService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.makemytrip.makemytrip.models.Users;
-import com.makemytrip.makemytrip.services.BookingService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/booking")
+@RequiredArgsConstructor
 public class BookingController {
-    @Autowired
-    private BookingService bookingService;
 
+    private final BookingService bookingService;
+
+    // ------------------- BOOK FLIGHT -------------------
     @PostMapping("/flight")
-    public Users.Booking bookFlight(@RequestParam String userId,@RequestParam String flightId,@RequestParam int seats,@RequestParam double price){
-        return bookingService.bookFlight(userId,flightId,seats,price);
+    public ResponseEntity<Booking> bookFlight(
+            @RequestParam String userId,
+            @RequestParam String flightId,
+            @RequestParam int seats,
+            @RequestParam double price) {
+
+        Booking booking = bookingService.bookFlight(userId, flightId, seats, price);
+        return ResponseEntity.ok(booking);
     }
+
+    // ------------------- BOOK HOTEL -------------------
     @PostMapping("/hotel")
-    public Users.Booking bookhotel (@RequestParam String userId,@RequestParam String hotelId,@RequestParam int rooms,@RequestParam double price){
-        return bookingService.bookhotel(userId,hotelId,rooms,price);
+    public ResponseEntity<Booking> bookHotel(
+            @RequestParam String userId,
+            @RequestParam String hotelId,
+            @RequestParam int rooms,
+            @RequestParam double price) {
+
+        Booking booking = bookingService.bookHotel(userId, hotelId, rooms, price);
+        return ResponseEntity.ok(booking);
+    }
+
+    // -------- Cancel Booking --------
+    @PostMapping("/cancel")
+    public ResponseEntity<Booking> cancelBooking(
+            @RequestParam String userId,
+            @RequestParam String bookingId,
+            @RequestParam String reason
+    ) {
+        Booking booking = bookingService.cancelBooking(userId, bookingId, reason);
+        return ResponseEntity.ok(booking);
+    }
+
+    // ------------------- GET USER BOOKINGS -------------------
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Booking>> getUserBookings(@PathVariable String userId) {
+        List<Booking> bookings = bookingService.getUserBookings(userId);
+        return ResponseEntity.ok(bookings);
     }
 }
