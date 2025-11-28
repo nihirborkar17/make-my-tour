@@ -20,7 +20,7 @@ public class RootController {
     private FlightRepository flightRepository;
     @GetMapping("/")
     public String home() {
-        return "✅ It's running on port 8080!";
+        return "✅ It's running on port 9090!";
     }
 
     @GetMapping("/hotel")

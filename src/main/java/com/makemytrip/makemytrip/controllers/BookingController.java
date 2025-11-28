@@ -11,6 +11,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/booking")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class BookingController {
 
     private final BookingService bookingService;
@@ -55,5 +56,12 @@ public class BookingController {
     public ResponseEntity<List<Booking>> getUserBookings(@PathVariable String userId) {
         List<Booking> bookings = bookingService.getUserBookings(userId);
         return ResponseEntity.ok(bookings);
+    }
+
+    // ------------------- GET SINGLE BOOKING -------------------
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<Booking> getBookingById(@PathVariable String bookingId) {
+        Booking booking = bookingService.getBookingById(bookingId);
+        return ResponseEntity.ok(booking);
     }
 }

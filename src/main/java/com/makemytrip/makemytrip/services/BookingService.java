@@ -61,9 +61,14 @@ public class BookingService {
         booking.setQuantity(seats);
         booking.setTotalPrice(price);
         booking.setBookingTime(LocalDateTime.now().toString());
-        booking.setJourneyDate(booking.getJourneyDate());
+        booking.setJourneyDate(flight.getDepartureTime());
         booking.setStatus("CONFIRMED");
         bookingRepository.save(booking);
+
+        // Add booking to user's embedded bookings list
+        user.getBookings().add(booking);
+        userRepository.save(user);
+
         return booking;
     }
 
@@ -97,26 +102,32 @@ public class BookingService {
         booking.setStatus("CONFIRMED");
 
         bookingRepository.save(booking);
+
+        // Add booking to user's embedded bookings list
+        user.getBookings().add(booking);
+        userRepository.save(user);
+
         return booking;
     }
     // ------------------- CANCEL BOOKING ------------------- //
     public Booking cancelBooking(String userId, String bookingId, String reason) {
-        Optional<Users> usersOptional = userRepository.findById(userId);
-        if (usersOptional.isEmpty()) {
-            throw new RuntimeException("User not found");
-        }
-
-        Users user = usersOptional.get();
-        Optional<Booking> bookingOptional = user.getBookings()
-                .stream()
-                .filter(b -> b.getId().equals(bookingId))
-                .findFirst();
-
+        // Load booking from repository
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
         if (bookingOptional.isEmpty()) {
             throw new RuntimeException("Booking not found");
         }
 
         Booking booking = bookingOptional.get();
+
+        // Validate ownership
+        if (!booking.getUserId().equals(userId)) {
+            throw new RuntimeException("User does not own this booking");
+        }
+
+        // Check if already cancelled
+        if ("CANCELLED".equals(booking.getStatus())) {
+            throw new RuntimeException("Booking is already cancelled");
+        }
 
         // Compute refund percentage (example: 50% if <24h, else 80%)
         double refundPercentage = calculateRefundPercentage(booking.getJourneyDate());
@@ -126,22 +137,30 @@ public class BookingService {
         booking.setRefundAmount(refundAmount);
         booking.setCancellationReason(reason);
         booking.setRefundStatus("INITIATED");
+        booking.setCancellationTime(LocalDateTime.now());
 
         // Handle seat/room restoration
-        if ("Flight".equalsIgnoreCase(booking.getBookingType())) {
+        if ("FLIGHT".equalsIgnoreCase(booking.getBookingType())) {
             flightRepository.findById(booking.getReferenceId()).ifPresent(flight -> {
                 flight.setAvailableSeats(flight.getAvailableSeats() + booking.getQuantity());
                 flightRepository.save(flight);
             });
-        } else if ("Hotel".equalsIgnoreCase(booking.getBookingType())) {
+        } else if ("HOTEL".equalsIgnoreCase(booking.getBookingType())) {
             hotelRepository.findById(booking.getReferenceId()).ifPresent(hotel -> {
                 hotel.setAvailableRooms(hotel.getAvailableRooms() + booking.getQuantity());
                 hotelRepository.save(hotel);
             });
         }
 
-        // Save changes
-        userRepository.save(user);
+        // Save booking changes
+        bookingRepository.save(booking);
+
+        // Also update user's embedded bookings list (remove the cancelled booking)
+        userRepository.findById(userId).ifPresent(u -> {
+            u.getBookings().removeIf(b -> bookingId.equals(b.getId()));
+            userRepository.save(u);
+        });
+
         return booking;
     }
 
@@ -160,14 +179,23 @@ public class BookingService {
     }
     // ------------------- GET USER BOOKINGS ------------------- //
     public List<Booking> getUserBookings(String userId) {
+        // Validate user exists
         Optional<Users> usersOptional = userRepository.findById(userId);
-
         if (usersOptional.isEmpty()) {
             throw new RuntimeException("User not found");
         }
 
-        Users user = usersOptional.get();
-        return user.getBookings();
+        // Fetch all bookings from bookingRepository (ensures up-to-date data)
+        return bookingRepository.findByUserId(userId);
+    }
+
+    // ------------------- GET SINGLE BOOKING ------------------- //
+    public Booking getBookingById(String bookingId) {
+        Optional<Booking> bookingOptional = bookingRepository.findById(bookingId);
+        if (bookingOptional.isEmpty()) {
+            throw new RuntimeException("Booking not found");
+        }
+        return bookingOptional.get();
     }
 
 }

@@ -213,3 +213,35 @@ export const handlehotelbooking = async (userId, hotelId, rooms, price) =>
     ),
     { label: "book hotel", normalize: "doc" }
   );
+
+// --- Single-item fetchers
+export const getFlightById = async (id) =>
+  handleRequest(api.get(`/flight/${id}`), {
+    label: "fetch flight by id",
+    normalize: "doc",
+  });
+
+export const getHotelById = async (id) =>
+  handleRequest(api.get(`/hotel/${id}`), {
+    label: "fetch hotel by id",
+    normalize: "doc",
+  });
+
+// --- Availability endpoints
+// GET /flight/availability?from=...&to=...&date=YYYY-MM-DD&seats=...
+export const getFlightAvailability = async ({ from, to, date, seats }) =>
+  handleRequest(
+    api.get("/flight/availability", {
+      params: { from, to, date, seats },
+    }),
+    { label: "flight availability", normalize: "list" }
+  );
+
+// GET /hotel/availability?location=...&checkin=YYYY-MM-DD&checkout=YYYY-MM-DD&rooms=...
+export const getHotelAvailability = async ({ location, checkin, checkout, rooms }) =>
+  handleRequest(
+    api.get("/hotel/availability", {
+      params: { location, checkin, checkout, rooms },
+    }),
+    { label: "hotel availability", normalize: "list" }
+  );
