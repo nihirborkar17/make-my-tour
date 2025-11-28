@@ -1,18 +1,58 @@
 import axios from "axios";
 
-const BACKEND_URL = "your backend url";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+  "http://localhost:8080";
 
-export const login = async (email, password) => {
+const api = axios.create({
+  baseURL: BACKEND_URL,
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const withStableId = (entity) =>
+  entity && typeof entity === "object"
+    ? { ...entity, id: entity.id ?? entity._id ?? entity.Id }
+    : entity;
+
+const normalizeList = (payload) =>
+  Array.isArray(payload) ? payload.map((entry) => withStableId(entry)) : [];
+
+const handleRequest = async (promise, { label, normalize } = {}) => {
   try {
-    const url = `${BACKEND_URL}/user/login?email=${email}&password=${password}`;
-    const res = await axios.post(url);
+    const res = await promise;
     const data = res.data;
-    // console.log(data);
+    if (normalize === "list") {
+      return normalizeList(data);
+    }
+    if (normalize === "doc") {
+      return withStableId(data);
+    }
     return data;
   } catch (error) {
+    const reason =
+      error?.response?.data?.message ||
+      error?.response?.data ||
+      error?.message ||
+      "Unknown error";
+    console.error(`[api] ${label ?? "request"} failed:`, reason);
     throw error;
   }
 };
+
+export const login = async (email, password) =>
+  handleRequest(
+    api.post(
+      "/user/login",
+      {},
+      {
+        params: { email, password },
+      }
+    ),
+    { label: "login", normalize: "doc" }
+  );
 
 export const signup = async (
   firstName,
@@ -20,32 +60,25 @@ export const signup = async (
   email,
   phoneNumber,
   password
-) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/user/signup`, {
+) =>
+  handleRequest(
+    api.post("/user/signup", {
       firstName,
       lastName,
       email,
       phoneNumber,
       password,
-    });
-    const data = res.data;
-    // console.log(data);
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
+    }),
+    { label: "signup", normalize: "doc" }
+  );
 
-export const getuserbyemail = async (email) => {
-  try {
-    const res = await axios.get(`${BACKEND_URL}/user/email?email=${email}`);
-    const data = res.data;
-    return data;
-  } catch (error) {
-    throw error;
-  }
-};
+export const getuserbyemail = async (email) =>
+  handleRequest(
+    api.get("/user/email", {
+      params: { email },
+    }),
+    { label: "get user by email", normalize: "doc" }
+  );
 
 export const editprofile = async (
   id,
@@ -53,27 +86,21 @@ export const editprofile = async (
   lastName,
   email,
   phoneNumber
-) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/user/edit?id=${id}`, {
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-    });
-    const data = res.data;
-    return data;
-  } catch (error) {}
-};
-export const getflight = async () => {
-  try {
-    const res = await axios.get(`${BACKEND_URL}/flight`);
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(data);
-  }
-};
+) =>
+  handleRequest(
+    api.post(
+      "/user/edit",
+      { firstName, lastName, email, phoneNumber },
+      { params: { id } }
+    ),
+    { label: "edit profile", normalize: "doc" }
+  );
+
+export const getflight = async () =>
+  handleRequest(api.get("/flight"), {
+    label: "fetch flights",
+    normalize: "list",
+  });
 
 export const addflight = async (
   flightName,
@@ -83,9 +110,9 @@ export const addflight = async (
   arrivalTime,
   price,
   availableSeats
-) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/admin/flight`, {
+) =>
+  handleRequest(
+    api.post("/admin/flight", {
       flightName,
       from,
       to,
@@ -93,13 +120,9 @@ export const addflight = async (
       arrivalTime,
       price,
       availableSeats,
-    });
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+    }),
+    { label: "add flight", normalize: "doc" }
+  );
 
 export const editflight = async (
   id,
@@ -110,9 +133,9 @@ export const editflight = async (
   arrivalTime,
   price,
   availableSeats
-) => {
-  try {
-    const res = await axios.put(`${BACKEND_URL}/admin/flight/${id}`, {
+) =>
+  handleRequest(
+    api.put(`/admin/flight/${id}`, {
       flightName,
       from,
       to,
@@ -120,23 +143,15 @@ export const editflight = async (
       arrivalTime,
       price,
       availableSeats,
-    });
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+    }),
+    { label: "edit flight", normalize: "doc" }
+  );
 
-export const gethotel = async () => {
-  try {
-    const res = await axios.get(`${BACKEND_URL}/hotel`);
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(data);
-  }
-};
+export const gethotel = async () =>
+  handleRequest(api.get("/hotel"), {
+    label: "fetch hotels",
+    normalize: "list",
+  });
 
 export const addhotel = async (
   hotelName,
@@ -144,21 +159,17 @@ export const addhotel = async (
   pricePerNight,
   availableRooms,
   amenities
-) => {
-  try {
-    const res = await axios.post(`${BACKEND_URL}/admin/hotel`, {
+) =>
+  handleRequest(
+    api.post("/admin/hotel", {
       hotelName,
       location,
       pricePerNight,
       availableRooms,
       amenities,
-    });
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+    }),
+    { label: "add hotel", normalize: "doc" }
+  );
 
 export const edithotel = async (
   id,
@@ -167,40 +178,38 @@ export const edithotel = async (
   pricePerNight,
   availableRooms,
   amenities
-) => {
-  try {
-    const res = await axios.put(`${BACKEND_URL}/admin/hotel/${id}`, {
+) =>
+  handleRequest(
+    api.put(`/admin/hotel/${id}`, {
       hotelName,
       location,
       pricePerNight,
       availableRooms,
       amenities,
-    });
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+    }),
+    { label: "edit hotel", normalize: "doc" }
+  );
 
-export const handleflightbooking = async (userId, flightId, seats, price) => {
-  try {
-    const url = `${BACKEND_URL}/booking/flight?userId=${userId}&flightId=${flightId}&seats=${seats}&price=${price}`;
-    const res = await axios.post(url);
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+export const handleflightbooking = async (userId, flightId, seats, price) =>
+  handleRequest(
+    api.post(
+      "/booking/flight",
+      {},
+      {
+        params: { userId, flightId, seats, price },
+      }
+    ),
+    { label: "book flight", normalize: "doc" }
+  );
 
-export const handlehotelbooking = async (userId, hotelId, rooms, price) => {
-  try {
-    const url = `${BACKEND_URL}/booking/flight?userId=${userId}&hotelId=${hotelId}&rooms=${rooms}&price=${price}`;
-    const res = await axios.post(url);
-    const data = res.data;
-    return data;
-  } catch (error) {
-    console.log(error);
-  }
-};
+export const handlehotelbooking = async (userId, hotelId, rooms, price) =>
+  handleRequest(
+    api.post(
+      "/booking/hotel",
+      {},
+      {
+        params: { userId, hotelId, rooms, price },
+      }
+    ),
+    { label: "book hotel", normalize: "doc" }
+  );

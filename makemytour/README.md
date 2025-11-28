@@ -1,4 +1,16 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app). The frontend is wired to the Spring Boot backend that lives in the repository root, so the UI can call the live Mongo-backed APIs for flights, hotels, bookings, and users.
+
+## Configuration
+
+1. Create a `.env.local` file in the `makemytour/` directory with the following content:
+
+   ```
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+   ```
+
+   Replace the URL with the public address of your Spring Boot instance when deploying.
+
+2. The React app reads that value at build/runtime, so restart `npm run dev` whenever you change it.
 
 ## Getting Started
 

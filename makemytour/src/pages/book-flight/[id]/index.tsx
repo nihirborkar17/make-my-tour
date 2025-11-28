@@ -18,7 +18,8 @@ import { useEffect, useState } from "react";
 import { getflight, handleflightbooking } from "@/api";
 import { useDispatch, useSelector } from "react-redux";
 interface Flight {
-  id: string; // Unique identifier for the flight
+  id?: string; // Unique identifier for the flight
+  _id?: string;
   flightName: string; // Name of the flight
   from: string; // Departure location
   to: string; // Arrival location
@@ -44,6 +45,8 @@ import { setUser } from "@/store";
 const BookFlightPage = () => {
   const router = useRouter();
   const { id } = router.query;
+  const normalizedId =
+    typeof id === "string" ? id : Array.isArray(id) ? id[0] : undefined;
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -51,12 +54,17 @@ const BookFlightPage = () => {
   const user = useSelector((state: any) => state.user.user);
   const dispatch = useDispatch();
   useEffect(() => {
+    if (!normalizedId) {
+      return;
+    }
     const fetchFlights = async () => {
       try {
-        const data = await getflight();
-        const filteredData = data.filter((flight: any) => flight.id === id);
+        const data: Flight[] = await getflight();
+        const filteredData = data.filter(
+          (flight) =>
+            (flight.id ?? flight._id ?? "").toString() === normalizedId
+        );
         setFlights(filteredData);
-        console.log(filteredData);
       } catch (error) {
         console.error("Error fetching flights:", error);
       } finally {
@@ -64,7 +72,7 @@ const BookFlightPage = () => {
       }
     };
     fetchFlights();
-  }, [id, user]);
+  }, [normalizedId, user]);
 
   if (loading) {
     return <Loader />;
@@ -167,16 +175,20 @@ const BookFlightPage = () => {
 
   const handlebooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id || !flight?.id) {
+      console.error("Unable to place booking without user or flight information");
+      return;
+    }
     try {
       const data = await handleflightbooking(
-        user?.id,
-        flight?.id,
+        user.id,
+        flight.id,
         quantity,
         grandTotal
       );
       const updateuser = {
         ...user,
-        bookings: [...user.bookings, data],
+        bookings: [...(user.bookings ?? []), data],
       };
       dispatch(setUser(updateuser));
       setopem(false);

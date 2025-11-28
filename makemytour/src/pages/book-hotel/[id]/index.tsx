@@ -17,7 +17,8 @@ import {
 import { useEffect, useState } from "react";
 import { gethotel, handlehotelbooking } from "@/api";
 interface Hotel {
-  id: string; // Unique identifier for the hotel
+  id?: string; // Unique identifier for the hotel
+  _id?: string;
   hotelName: string; // Name of the hotel
   location: string; // Location of the hotel
   pricePerNight: number; // Price per night
@@ -42,30 +43,41 @@ const BookHotelPage = () => {
   const [quantity, setQuantity] = useState(1);
   const router = useRouter();
   const { id } = router.query; // Access the hotel ID from the URL
+  const normalizedId =
+    typeof id === "string" ? id : Array.isArray(id) ? id[0] : undefined;
   const [hotels, sethotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const user = useSelector((state: any) => state.user.user);
   const [open, setopem] = useState(false);
   const dispatch = useDispatch();
   useEffect(() => {
+    if (!normalizedId) {
+      return;
+    }
     const fetchhotels = async () => {
       try {
-        const data = await gethotel();
-        const filteredData = data.filter((hotel: any) => hotel.id === id);
+        const data: Hotel[] = await gethotel();
+        const filteredData = data.filter(
+          (hotel: Hotel) =>
+            (hotel.id ?? hotel._id ?? "").toString() === normalizedId
+        );
         sethotels(filteredData);
       } catch (error) {
-        console.error("Error fetching flights:", error);
+        console.error("Error fetching hotels:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchhotels();
-  }, []);
+  }, [normalizedId]);
 
   if (loading) {
     return <Loader />;
   }
   const hotel = hotels[0];
+  if (!hotel) {
+    return <div>No hotel data available for this ID.</div>;
+  }
   const hotelData = {
     name: "Magnum Resorts- Near Candolim Beach",
     rating: 3,
@@ -107,7 +119,9 @@ const BookHotelPage = () => {
     e.preventDefault();
     const value = Number.parseInt(e.target.value);
     setQuantity(
-      isNaN(value) ? 1 : Math.max(1, Math.min(value, hotel.availableRooms))
+      isNaN(value)
+        ? 1
+        : Math.max(1, Math.min(value, hotel?.availableRooms ?? 1))
     );
   };
 
@@ -117,16 +131,20 @@ const BookHotelPage = () => {
   const grandTotal = totalPrice + totalTaxes - totalDiscounts;
   const handlebooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id || !hotel?.id) {
+      console.error("Unable to place booking without user or hotel information");
+      return;
+    }
     try {
       const data = await handlehotelbooking(
-        user?.id,
-        hotel?.id,
+        user.id,
+        hotel.id,
         quantity,
         grandTotal
       );
       const updateuser = {
         ...user,
-        bookings: [...user.bookings, data],
+        bookings: [...(user.bookings ?? []), data],
       };
       dispatch(setUser(updateuser));
       setopem(false);

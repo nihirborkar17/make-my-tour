@@ -15,4 +15,5 @@ public class CancellationPolicyService {
         else if (hoursBeforeJourney >= 24) return 0.75; // 75% refund
         else return 0.5;   // 50% refund if <24 hours before journey
     }
+
 }

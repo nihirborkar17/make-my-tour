@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   User,
   Phone,
@@ -17,6 +17,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/router";
 import { clearUser, setUser } from "@/store";
 import { editprofile } from "@/api";
+
+type EditableField = "firstName" | "lastName" | "email" | "phoneNumber";
 const index = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user.user);
@@ -28,43 +30,27 @@ const index = () => {
   };
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState({
-    firstName: user?.firstName ? user?.firstName : "",
-    lastName: user?.lastName ? user?.lastName : "",
-    email: user?.email ? user?.email : "",
-    phoneNumber: user?.phoneNumber ? user?.phoneNumber : "",
-    bookings: [
-      {
-        type: "Flight",
-        bookingId: "F123456",
-        date: "2024-03-25",
-        quantity: 2,
-        totalPrice: 12499,
-        details: {
-          from: "Delhi",
-          to: "Mumbai",
-          airline: "IndiGo",
-        },
-      },
-      {
-        type: "Hotel",
-        bookingId: "H789012",
-        date: "2024-04-15",
-        quantity: 1,
-        totalPrice: 8999,
-        details: {
-          name: "Taj Palace",
-          location: "Goa",
-          nights: 3,
-        },
-      },
-    ],
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+    email: user?.email ?? "",
+    phoneNumber: user?.phoneNumber ?? "",
   });
 
-  const [editForm, setEditForm] = useState({ ...userData });
+  useEffect(() => {
+    setUserData({
+      firstName: user?.firstName ?? "",
+      lastName: user?.lastName ?? "",
+      email: user?.email ?? "",
+      phoneNumber: user?.phoneNumber ?? "",
+    });
+  }, [user]);
   const handleSave = async () => {
+    if (!user?.id) {
+      return;
+    }
     try {
       const data = await editprofile(
-        user?.id,
+        user.id,
         userData.firstName,
         userData.lastName,
         userData.email,
@@ -73,24 +59,43 @@ const index = () => {
       dispatch(setUser(data));
       setIsEditing(false);
     } catch (error) {
-      setUserData(editForm);
+      console.error("Failed to update profile", error);
       setIsEditing(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) {
+      return "Date not available";
+    }
     return new Date(dateString).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
   };
-  const handleEditFormChange = (field:any, value:any) => {
+  const handleEditFormChange = (field: EditableField, value: string) => {
     setUserData((prevState) => ({
         ...prevState,
         [field]: value, // Update the specific field dynamically
       }));
   };
+  const bookings = user?.bookings ?? [];
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-8 px-4">
+        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">You're not signed in</h2>
+          <p className="text-gray-600">
+            Please log in from the navigation bar to view and manage your profile
+            information.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pt-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -169,7 +174,12 @@ const index = () => {
                     <button
                       onClick={() => {
                         setIsEditing(false);
-                        setEditForm({ ...user });
+                        setUserData({
+                          firstName: user?.firstName ?? "",
+                          lastName: user?.lastName ?? "",
+                          email: user?.email ?? "",
+                          phoneNumber: user?.phoneNumber ?? "",
+                        });
                       }}
                       className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                     >
@@ -214,7 +224,7 @@ const index = () => {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-2xl font-bold mb-6">My Bookings</h2>
               <div className="space-y-6">
-                {user?.bookings.map((booking: any, index: any) => (
+                {bookings.map((booking: any, index: number) => (
                   <div
                     key={index}
                     className="border rounded-lg p-4 hover:shadow-md transition-shadow"

@@ -1,5 +1,6 @@
 package com.makemytrip.makemytrip.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import com.makemytrip.makemytrip.repositories.FlightRepository;
 import com.makemytrip.makemytrip.repositories.HotelRepository;
 import java.util.List;
 import java.util.Optional;
+
 @RestController
 @RequestMapping("/admin")
 @CrossOrigin(origins = "*")
